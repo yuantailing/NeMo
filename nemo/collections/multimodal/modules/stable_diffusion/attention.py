@@ -283,9 +283,6 @@ class CrossAttention(nn.Module):
         self.scale = dim_head**-0.5
         self.heads = heads
 
-        self.to_k = LinearWrapper(context_dim, self.inner_dim, bias=False, lora_network_alpha=lora_network_alpha)
-        self.to_v = LinearWrapper(context_dim, self.inner_dim, bias=False, lora_network_alpha=lora_network_alpha)
-
         self.use_te_dpa = use_te_dpa
         self.use_te = use_te
         if use_te:
@@ -296,6 +293,9 @@ class CrossAttention(nn.Module):
         else:
             self.norm = nn.LayerNorm(query_dim)
             self.to_q = LinearWrapper(query_dim, self.inner_dim, bias=False)
+
+        self.to_k = LinearWrapper(context_dim, self.inner_dim, bias=False, lora_network_alpha=lora_network_alpha)
+        self.to_v = LinearWrapper(context_dim, self.inner_dim, bias=False, lora_network_alpha=lora_network_alpha)
 
         self.to_out = nn.Sequential(
             LinearWrapper(self.inner_dim, query_dim, lora_network_alpha=lora_network_alpha), nn.Dropout(dropout)
@@ -449,7 +449,6 @@ class BasicTransformerBlock(nn.Module):
             lora_network_alpha=lora_network_alpha,
             use_te=use_te,
         )  # is a self-attention
-        self.ff = FeedForward(dim, dropout=dropout, glu=gated_ff, use_te=use_te)
         self.attn2 = CrossAttention(
             query_dim=dim,
             context_dim=context_dim,
@@ -461,6 +460,7 @@ class BasicTransformerBlock(nn.Module):
             lora_network_alpha=lora_network_alpha,
             use_te=use_te,
         )  # is self-attn if context is none
+        self.ff = FeedForward(dim, dropout=dropout, glu=gated_ff, use_te=use_te)
         self.use_checkpoint = use_checkpoint
 
     def forward(self, x, context=None, additional_tokens=None, n_times_crossframe_attn_in_self=0):
